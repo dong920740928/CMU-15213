@@ -413,4 +413,32 @@ unsigned float_i2f(int x) {
  *   Max ops: 30
  *   Rating: 4
  */
-unsigned float_twice(unsigned uf) { return 2; }
+unsigned float_twice(unsigned uf) {
+    unsigned frac = uf & 0x007fffff;
+    unsigned exp = (uf >> 23) & 0x000000ff;
+    unsigned res = 0;
+
+    if (exp == 0) {
+        // denormal
+        unsigned overflow = frac & 0x00400000;
+        frac <<= 1;
+        if (overflow) {
+            exp = 1;
+        }
+    } else if (exp == 0xff) {
+        // special value
+    } else {
+        // normal
+        ++exp;
+        if (exp == 0xff) {
+            // overflow
+            frac = 0;
+        }
+    }
+
+    res |= frac;
+    res |= (exp << 23);
+    res |= (uf & 0x80000000);
+
+    return res;
+}
