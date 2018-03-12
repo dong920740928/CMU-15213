@@ -4,7 +4,7 @@ Use `gdb` command with `-tui` argument to disassemble file `bomb`, and use `layo
 
 In each phase, program read a string as the parameter input of the phase function. In each phase function, there are several "explode bomb" instructions which can "explode" the program. Our goal is to figure out the correct input of each phase that avoid the execution of those "explode bomb" instructions.
 
-##Phase 1
+## Phase 1
 
 Read the assembly code in function `phase_1`. It reads a string from input, and compares the string with a string constant store at address `0x402400`.
 ```assembly
@@ -30,7 +30,7 @@ Use command `objdump -s -j .rodata bomb` to get the text section, and find the s
 
 As the content printed, the correct input of phase 1 is `Border relations with Canada have never been better.`
 
-##Phase 2
+## Phase 2
 Read the assembly code in function `phase_2`. It reads six numbers from input, then check the array for some conditions. 
 
 ```assembly
@@ -65,4 +65,4 @@ Read the assembly code in function `phase_2`. It reads six numbers from input, t
 The first number must be `1`, and for each i from 1 to 6, a<sub>i+1</sub> = 2a<sub>i</sub>
 So the correct input of phase 2 is `1 2 4 8 16 32`
 
-##Phase 3
+## Phase 3
