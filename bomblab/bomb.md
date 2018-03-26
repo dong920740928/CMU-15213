@@ -66,3 +66,108 @@ The first number must be `1`, and for each i from 1 to 6, a<sub>i+1</sub> = 2a<s
 So the correct input of phase 2 is `1 2 4 8 16 32`
 
 ## Phase 3
+Read the assembly code in function `<phase_3>`. It reads two numbers from input and then executes a switch operation. The base address of the jump table of switch operation is `0x402470`.
+While debugging the program, we can dump the memory of the jump table to determine the operations for each case of `switch (a)`.
+
+Since there are 8 entries (0 <= a <= 7), we use command `x/16 0x402470` in gdb.
+Then we get the code blocks of all 8 cases of variable `a`.
+```
+(gdb) x/16 0x402470
+0x402470:       0x00400f7c      0x00000000      0x00400fb9      0x00000000
+0x402480:       0x00400f83      0x00000000      0x00400f8a      0x00000000
+0x402490:       0x00400f91      0x00000000      0x00400f98      0x00000000
+0x4024a0:       0x00400f9f      0x00000000      0x00400fa6      0x00000000
+```
+
+Each eight bytes display an entry, so we catch the 8 entries for 0 <= a <= 7. 
+For example, if a equals to 1, then code start from `400fb9` would be executed. If `b == 311` does not hold, bomb will be exploded.
+
+```assembly
+0000000000400f43 <phase_3>:
+  400f43:	48 83 ec 18          	sub    $0x18,%rsp
+  400f47:	48 8d 4c 24 0c       	lea    0xc(%rsp),%rcx	// input b
+  400f4c:	48 8d 54 24 08       	lea    0x8(%rsp),%rdx	// input a
+  400f51:	be cf 25 40 00       	mov    $0x4025cf,%esi
+  400f56:	b8 00 00 00 00       	mov    $0x0,%eax
+  400f5b:	e8 90 fc ff ff       	callq  400bf0 <__isoc99_sscanf@plt>
+  400f60:	83 f8 01             	cmp    $0x1,%eax
+  400f63:	7f 05                	jg     400f6a <phase_3+0x27>
+  400f65:	e8 d0 04 00 00       	callq  40143a <explode_bomb>
+  400f6a:	83 7c 24 08 07       	cmpl   $0x7,0x8(%rsp)	// unsigned compare
+  400f6f:	77 3c                	ja     400fad <phase_3+0x6a>	// check whether 0 <= a <= 7
+  400f71:	8b 44 24 08          	mov    0x8(%rsp),%eax	// switch(a)
+  400f75:	ff 24 c5 70 24 40 00 	jmpq   *0x402470(,%rax,8)	// switch table base
+  400f7c:	b8 cf 00 00 00       	mov    $0xcf,%eax	// case a == 0
+  400f81:	eb 3b                	jmp    400fbe <phase_3+0x7b>	// t = 207
+  400f83:	b8 c3 02 00 00       	mov    $0x2c3,%eax	// case a == 2
+  400f88:	eb 34                	jmp    400fbe <phase_3+0x7b>	// t = 707
+  400f8a:	b8 00 01 00 00       	mov    $0x100,%eax	// case a == 3
+  400f8f:	eb 2d                	jmp    400fbe <phase_3+0x7b>	// t = 256
+  400f91:	b8 85 01 00 00       	mov    $0x185,%eax	// case a == 4
+  400f96:	eb 26                	jmp    400fbe <phase_3+0x7b>	// t = 389
+  400f98:	b8 ce 00 00 00       	mov    $0xce,%eax	// case a == 5
+  400f9d:	eb 1f                	jmp    400fbe <phase_3+0x7b>	// t = 206
+  400f9f:	b8 aa 02 00 00       	mov    $0x2aa,%eax	// case a == 6
+  400fa4:	eb 18                	jmp    400fbe <phase_3+0x7b>	// t = 682
+  400fa6:	b8 47 01 00 00       	mov    $0x147,%eax	// case a == 7
+  400fab:	eb 11                	jmp    400fbe <phase_3+0x7b>	// t = 327
+  400fad:	e8 88 04 00 00       	callq  40143a <explode_bomb>
+  400fb2:	b8 00 00 00 00       	mov    $0x0,%eax
+  400fb7:	eb 05                	jmp    400fbe <phase_3+0x7b>
+  400fb9:	b8 37 01 00 00       	mov    $0x137,%eax	// case a == 1:	t = 311
+  400fbe:	3b 44 24 0c          	cmp    0xc(%rsp),%eax	// check whether b == t
+  400fc2:	74 05                	je     400fc9 <phase_3+0x86>
+  400fc4:	e8 71 04 00 00       	callq  40143a <explode_bomb>
+  400fc9:	48 83 c4 18          	add    $0x18,%rsp
+  400fcd:	c3                   	retq
+```
+
+The equivalent switch case operation of the assembly code above is
+```cpp
+uint t;
+switch (a){
+	case 0:
+		t = 207;
+		break;
+	case 1:
+		t = 311;
+		break;
+	case 2:
+		t = 707;
+		break;
+	case 3:
+		t = 256;
+		break;
+	case 4:
+		t = 389;
+		break;
+	case 5:
+		t = 206;
+		break;
+	case 6:
+		t = 682;
+		break;
+	case 7:
+		t = 327;
+		break;
+}
+
+if (b != t){
+	// expode bomb
+}
+```
+
+So all the solution input of `phase_3` are:
+```
+0 207
+1 311
+2 707
+3 256
+4 389
+5 206
+6 682
+7 327
+```
+Any of them can pass `phase_3`.
+
+## Phase 4
