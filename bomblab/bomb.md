@@ -171,3 +171,94 @@ So all the solution input of `phase_3` are:
 Any of them can pass `phase_3`.
 
 ## Phase 4
+Read the assembly code in `phase_4`. It reads two numbers `a b` from input. There is limit for `a` and `b`, 0 <= a <= 14 and b == 0.
+Then call a recursive function `fun4`. It calculates `fun4(14, 0, a)` and the return value must be zero otherwise bomb will explode.
+
+```assembly
+000000000040100c <phase_4>://
+  40100c:	48 83 ec 18          	sub    $0x18,%rsp
+  401010:	48 8d 4c 24 0c       	lea    0xc(%rsp),%rcx
+  401015:	48 8d 54 24 08       	lea    0x8(%rsp),%rdx
+  40101a:	be cf 25 40 00       	mov    $0x4025cf,%esi
+  40101f:	b8 00 00 00 00       	mov    $0x0,%eax
+  401024:	e8 c7 fb ff ff       	callq  400bf0 <__isoc99_sscanf@plt>
+  401029:	83 f8 02             	cmp    $0x2,%eax
+  40102c:	75 07                	jne    401035 <phase_4+0x29>
+  40102e:	83 7c 24 08 0e       	cmpl   $0xe,0x8(%rsp)	// check whether 0 <= a <= 14
+  401033:	76 05                	jbe    40103a <phase_4+0x2e>
+  401035:	e8 00 04 00 00       	callq  40143a <explode_bomb>
+  40103a:	ba 0e 00 00 00       	mov    $0xe,%edx
+  40103f:	be 00 00 00 00       	mov    $0x0,%esi
+  401044:	8b 7c 24 08          	mov    0x8(%rsp),%edi
+  401048:	e8 81 ff ff ff       	callq  400fce <func4>	// fun4(14, 0, a)
+  40104d:	85 c0                	test   %eax,%eax	// check whether return value is 0
+  40104f:	75 07                	jne    401058 <phase_4+0x4c>
+  401051:	83 7c 24 0c 00       	cmpl   $0x0,0xc(%rsp)	// check whether b == 0
+  401056:	74 05                	je     40105d <phase_4+0x51>
+  401058:	e8 dd 03 00 00       	callq  40143a <explode_bomb>
+  40105d:	48 83 c4 18          	add    $0x18,%rsp
+  401061:	c3                   	retq
+```
+
+The function `fun4` takes three arguments, It might be recursive for serveral tiers and then return a value.
+Read the assembly code of `fun4`, we can get the equivalent code below:
+
+```cpp
+int fun4(int x, int y, int z){
+	int t = (x - y + x < y) / 2 + y;
+	if (t > z){
+		// entry 1
+		x = t - 1;
+		return 2 * fun4(x, y, z);
+	} else if (t < z) {
+		// entry 2
+		y = t + 1;
+		return 2 * fun4(x, y, z) + 1;
+	} else {
+		// entry 3
+		return 0;
+	}
+}
+``` 
+
+As we can see, there are three entries in `fun4`, two recursive and one return zero. It any tier steps into enrty one during recursive function call, the return value must above than 0 and bomb explodes. So in safe case, entry 2 will not be executed so argument `y` is always `0`.
+Then we can simplify the equivalent code of `fun4` like below:
+
+```cpp
+int fun4(int x, int y, int z){
+	int t = x / 2;
+	if (t > z){
+		// entry 1
+		x = t - 1;
+		return 2 * fun4(x, y, z);
+	} else if (t < z) {
+		// entry 2 (never jump into here)
+		y = t + 1;
+		return 2 * fun4(x, y, z) + 1;
+	} else {
+		// entry 3
+		return 0;
+	}
+}
+```
+
+Since the top function call is `fun4(14, 0 , a)`, the correct code trace must be
+```cpp
+fun4(14, 0, a) --> 0		// a == 7
+or
+fun4(14, 0, a) --> fun4(6, 0, a) --> 0	// a == 3
+or
+fun4(14, 0, a) --> fun4(6, 0, a) --> fun4(2, 0, a) --> 0	// a == 1
+or
+fun4(14, 0, a) --> fun4(6, 0, a) --> fun4(2, 0, a) --> fun4(0, 0, a) --> 0	// a == 0
+```
+
+So all the solutions of `phase_4` are:
+```
+7 0
+3 0
+1 0
+0 0
+```
+
+Any of them can pass `phase_4`.
