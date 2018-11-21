@@ -363,3 +363,251 @@ Finally string:
 ```
 
 ## Phase 6
+Read the assembly code in `phase_6`. It try to read a sequece of number list `1 2 3 4 5 6`, then construct a link list according the numbers and six global static `Node` variable at `0x6032d0`. Finally it checks whether the link list is in descending order. If the link list is not in descending order, bomb explodes.
+
+This phase is much more complex than formers.
+I devide the assembly code into seven small segments for understanding the logic of whole phase.
+
+1. read six numbers `arr`.
+2. check each number in `arr` is between `1` and `6` and the numbers in `arr` are different
+4. map each `x` to `7-x` in `arr`
+5. make a list of `Node *`, named `tmp_nodes`.  `tmp_nodes[i]` points to Node`arr[i]`
+6. construct a link list by `tmp_nodes`, The `next field` of `tmp_nodes[i] points to `tmp_nodes[i+1] for `0 <= i <= 4`, `next field` of `tmp_nodes[5]` is `NULL`
+7. check whether `value` of `tmp_nodes` is in descending order.
+
+beginning
+```
+00000000004010f4 <phase_6>:
+  4010f4:	41 56                	push   %r14
+  4010f6:	41 55                	push   %r13
+  4010f8:	41 54                	push   %r12
+  4010fa:	55                   	push   %rbp
+  4010fb:	53                   	push   %rbx
+  4010fc:	48 83 ec 50          	sub    $0x50,%rsp
+```
+
+segment 1:
+```asm
+  
+  401100:	49 89 e5             	mov    %rsp,%r13
+  401103:	48 89 e6             	mov    %rsp,%rsi
+  401106:	e8 51 03 00 00       	callq  40145c <read_six_numbers>
+  40110b:	49 89 e6             	mov    %rsp,%r14
+```
+
+This segment is easy to understand.
+  
+segment 2:
+```
+  
+  40110e:	41 bc 00 00 00 00    	mov    $0x0,%r12d
+  401114:	4c 89 ed             	mov    %r13,%rbp
+  401117:	41 8b 45 00          	mov    0x0(%r13),%eax
+  40111b:	83 e8 01             	sub    $0x1,%eax
+  40111e:	83 f8 05             	cmp    $0x5,%eax
+  401121:	76 05                	jbe    401128 <phase_6+0x34>
+  401123:	e8 12 03 00 00       	callq  40143a <explode_bomb>
+  401128:	41 83 c4 01          	add    $0x1,%r12d
+  40112c:	41 83 fc 06          	cmp    $0x6,%r12d
+  401130:	74 21                	je     401153 <phase_6+0x5f>
+  401132:	44 89 e3             	mov    %r12d,%ebx
+  401135:	48 63 c3             	movslq %ebx,%rax
+  401138:	8b 04 84             	mov    (%rsp,%rax,4),%eax
+  40113b:	39 45 00             	cmp    %eax,0x0(%rbp)
+  40113e:	75 05                	jne    401145 <phase_6+0x51>
+  401140:	e8 f5 02 00 00       	callq  40143a <explode_bomb>
+  401145:	83 c3 01             	add    $0x1,%ebx
+  401148:	83 fb 05             	cmp    $0x5,%ebx
+  40114b:	7e e8                	jle    401135 <phase_6+0x41>
+  40114d:	49 83 c5 04          	add    $0x4,%r13
+  401151:	eb c1                	jmp    401114 <phase_6+0x20>
+```
+
+This segment facts as c++ code below:
+
+```cpp
+for (int i = 0; i < 6; ++i){
+    if ((uint)(arr[i] - 1) > 5){
+        bomb();
+    }
+    for (int j = i + 1; j < 6; ++j){
+        if (arr[i] == arr[j]){
+            bomb();
+        }
+    }
+}
+```
+
+segment 3:
+
+```
+  401153:	48 8d 74 24 18       	lea    0x18(%rsp),%rsi
+  401158:	4c 89 f0             	mov    %r14,%rax
+  40115b:	b9 07 00 00 00       	mov    $0x7,%ecx
+  401160:	89 ca                	mov    %ecx,%edx
+  401162:	2b 10                	sub    (%rax),%edx
+  401164:	89 10                	mov    %edx,(%rax)
+  401166:	48 83 c0 04          	add    $0x4,%rax
+  40116a:	48 39 f0             	cmp    %rsi,%rax
+  40116d:	75 f1                	jne    401160 <phase_6+0x6c>
+```
+
+This segment acts c++ code below and easy to understand.
+```cpp
+for (int i = 0; i < 6; ++i){
+    arr[i] = 7 - arr[i];
+}
+```
+
+segment 4:
+
+```
+  40116f:	be 00 00 00 00       	mov    $0x0,%esi
+  401174:	eb 21                	jmp    401197 <phase_6+0xa3>
+  401176:	48 8b 52 08          	mov    0x8(%rdx),%rdx
+  40117a:	83 c0 01             	add    $0x1,%eax
+  40117d:	39 c8                	cmp    %ecx,%eax
+  40117f:	75 f5                	jne    401176 <phase_6+0x82>
+  401181:	eb 05                	jmp    401188 <phase_6+0x94>
+  401183:	ba d0 32 60 00       	mov    $0x6032d0,%edx
+  401188:	48 89 54 74 20       	mov    %rdx,0x20(%rsp,%rsi,2)
+  40118d:	48 83 c6 04          	add    $0x4,%rsi
+  401191:	48 83 fe 18          	cmp    $0x18,%rsi
+  401195:	74 14                	je     4011ab <phase_6+0xb7>
+  401197:	8b 0c 34             	mov    (%rsp,%rsi,1),%ecx
+  40119a:	83 f9 01             	cmp    $0x1,%ecx
+  40119d:	7e e4                	jle    401183 <phase_6+0x8f>
+  40119f:	b8 01 00 00 00       	mov    $0x1,%eax
+  4011a4:	ba d0 32 60 00       	mov    $0x6032d0,%edx
+  4011a9:	eb cb                	jmp    401176 <phase_6+0x82>
+```
+
+This segment constructs `tmp_nodes` from static Node* variables and `arr`. It reads data from address `0x6032b0`. That is a static variable since the address is determined before running program.
+Use command `objdump -t ./bomb` to look up the global static vaiables.
+```
+00000000006032f0 g     O .data	0000000000000010              node3
+00000000006032d0 g     O .data	0000000000000010              node1
+0000000000603310 g     O .data	0000000000000010              node5
+00000000006032e0 g     O .data	0000000000000010              node2
+0000000000603300 g     O .data	0000000000000010              node4
+0000000000603320 g     O .data	0000000000000010              node6
+```
+And use command `objdump -s -j .data ./bomb` to look up the value of them.
+
+```
+ 6032b0 e9030000 00000000 00000000 00000000  ................
+ 6032c0 00000000 00000000 00000000 00000000  ................
+ 6032d0 4c010000 01000000 e0326000 00000000  L........2`.....
+ 6032e0 a8000000 02000000 f0326000 00000000  .........2`.....
+ 6032f0 9c030000 03000000 00336000 00000000  .........3`.....
+ 603300 b3020000 04000000 10336000 00000000  .........3`.....
+ 603310 dd010000 05000000 20336000 00000000  ........ 3`.....
+ 603320 bb010000 06000000 00000000 00000000  ................
+```
+In x64 system, size of a virtual memory address is 64bits (48 bits in use). 
+According to instruction `mov    0x8(%rdx),%rdx`and global static variables above, we can infer the structure of `Node` below:
+```
+struct Node{
+    int value; // 4 bytes
+    int index; // 4 bytes
+    struct Node *next; // 8 bytes
+}
+```
+The declararion of nodes can also be inferred:
+```
+struct Node node6 = { 0x01bb, 0x06, NULL};
+struct Node node5 = { 0x01dd, 0x05, &node6};
+...
+```
+
+By the way, the `next` field of node1 is `e0326000 00000000`
+and the address of node2 is `6032e0`, so the compile platform of bomb.c must be Little Endian.
+
+According to the conclusions above, this segment acts c++ code below:
+```cpp
+struct Node* tmp_nodes[6];
+for (int i = 0; i < 6; ++i){
+    struct Node *p = node1;
+    for (int j = 1; j < arr[i]; ++j){
+        p = p->next;
+    }
+    tmp_nodes[i] = p;
+}
+```
+
+segment 5:
+
+```
+  4011ab:	48 8b 5c 24 20       	mov    0x20(%rsp),%rbx
+  4011b0:	48 8d 44 24 28       	lea    0x28(%rsp),%rax
+  4011b5:	48 8d 74 24 50       	lea    0x50(%rsp),%rsi
+  4011ba:	48 89 d9             	mov    %rbx,%rcx
+  4011bd:	48 8b 10             	mov    (%rax),%rdx
+  4011c0:	48 89 51 08          	mov    %rdx,0x8(%rcx)
+  4011c4:	48 83 c0 08          	add    $0x8,%rax
+  4011c8:	48 39 f0             	cmp    %rsi,%rax
+  4011cb:	74 05                	je     4011d2 <phase_6+0xde>
+  4011cd:	48 89 d1             	mov    %rdx,%rcx
+  4011d0:	eb eb                	jmp    4011bd <phase_6+0xc9>
+  4011d2:	48 c7 42 08 00 00 00 	movq   $0x0,0x8(%rdx)
+  4011d9:	00 
+```
+
+This segment simply construct the link list by `tmp_nodes`.
+
+```cpp
+struct Node *p, *q;
+p = tmp_nodes;
+q = tmp_nodes + 1;
+while (q < tmp_nodes + 6) {
+    p->next = q;
+    q++;
+    p = p->next;
+}
+```
+
+segment 6:
+
+```
+  4011da:	bd 05 00 00 00       	mov    $0x5,%ebp
+  4011df:	48 8b 43 08          	mov    0x8(%rbx),%rax
+  4011e3:	8b 00                	mov    (%rax),%eax
+  4011e5:	39 03                	cmp    %eax,(%rbx)
+  4011e7:	7d 05                	jge    4011ee <phase_6+0xfa>
+  4011e9:	e8 4c 02 00 00       	callq  40143a <explode_bomb>
+  4011ee:	48 8b 5b 08          	mov    0x8(%rbx),%rbx
+  4011f2:	83 ed 01             	sub    $0x1,%ebp
+  4011f5:	75 e8                	jne    4011df <phase_6+0xeb>
+```
+
+This segment check whether the link list is in descending order
+
+```cpp
+int p = 5;
+struct Node *q = tmp_nodes;
+while (p > 0){
+    if (q->value < q->next->value){
+        bomb();
+    }
+    p--;
+    q = q->next;
+}
+```
+
+ending
+```
+  4011f7:	48 83 c4 50          	add    $0x50,%rsp
+  4011fb:	5b                   	pop    %rbx
+  4011fc:	5d                   	pop    %rbp
+  4011fd:	41 5c                	pop    %r12
+  4011ff:	41 5d                	pop    %r13
+  401201:	41 5e                	pop    %r14
+  401203:	c3                   	retq
+```
+
+To solution `phase_6`,  weuse reverse deduction method from segment 6 to segment 1.
+For segment 6,  values of `tmp_nodes` must in descending order. According to static variables table, it must be `0x039c 0x02b3 0x01dd 0x01bb 0x014c 0x00a8`.
+So the `tmp_nodes` after segment 5 must be `node3 node4 node5 node6 node1 node2`
+According to static variables table, the original link of nodes is `node1 node2 node3 node4 node5 node6`. So `arr` before segment 4 must be `3 4 5 6 1 2`.
+The original input of `arr` is `4 3 2 1 6 5`.
+Finally, we figure out the answer of `phase_6`: `4 3 2 1 6 5`.
